@@ -42,11 +42,10 @@ jobs:
         run: echo tag=%GITHUB_SHA%>> %GITHUB_OUTPUT%
 
       - name: Docker login to Harbor
-        run: echo %DOCKER_PASSWORD% | docker login %HARBOR_REGISTRY% -u %DOCKER_USERNAME% --password-stdin
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
+        shell: cmd
+        run: |
+          docker login ${{ env.HARBOR_REGISTRY }} -u "${{ secrets.HARBOR_USERNAME }}" -p "${{ secrets.HARBOR_PASSWORD }}"
+ 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
