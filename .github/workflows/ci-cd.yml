@@ -19,6 +19,10 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
 
+    defaults:
+      run:
+        shell: cmd
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -35,17 +39,28 @@ jobs:
 
       - name: Generate image tag
         id: meta
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: echo tag=%GITHUB_SHA%>> %GITHUB_OUTPUT%
 
-      - name: Log in to Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HARBOR_REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
+      - name: Prepare clean Docker config
+        run: |
+          mkdir "%RUNNER_TEMP%\docker-config"
+          echo {} > "%RUNNER_TEMP%\docker-config\config.json"
+          echo DOCKER_CONFIG=%RUNNER_TEMP%\docker-config>> %GITHUB_ENV%
+
+      - name: Docker login to Docker Hub
+        run: echo %DOCKERHUB_PASSWORD% | docker login -u %DOCKERHUB_USERNAME% --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}    
+
+      - name: Docker login to Harbor
+        run: echo %HARBOR_PASSWORD% | docker login %HARBOR_REGISTRY% -u %HARBOR_USERNAME% --password-stdin
+        env:
+          HARBOR_USERNAME: ${{ secrets.HARBOR_USERNAME }}
+          HARBOR_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5 
+        uses: docker/build-push-action@v5
         with:
           context: .
           push: true
